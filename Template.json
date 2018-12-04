@@ -1,0 +1,387 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "A Basic AWS VPC with Cloudformation.. More informations contact Helio Nogueira <helio.nogueira@gmail.com>.",
+    "Parameters": {
+        "VPCIPv4CIDR": {
+            "Description": "VPC IPv4 CIDR (Exemplo: 172.20)",
+            "Type": "String",
+            "MinLength": "6",
+            "MaxLength": "7",
+            "AllowedPattern": "^(\\d{1,3}\\.)(\\d{1,3})$",
+            "Default": "172.20"
+        },
+        "ZoneSubnetA": {
+            "Description": "Zone Subnet \"a\"",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "ZoneSubnetB": {
+            "Description": "Zone Subnet \"b\"",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        }
+    },
+    "Mappings": {
+        "Environment": {
+            "Constant": {
+                "ProductName": "basic-aws-cloudformation-vpc"
+            }
+        }
+    },
+    "Resources": {
+        "VPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {
+                    "Fn::Join": ["", [{
+                        "Ref": "VPCIPv4CIDR"
+                    }, ".0.0/16"]]
+                },
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": false,
+                "InstanceTenancy": "default",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                    }
+                }]
+            }
+        },
+        "RouteTableIG": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ig"]]
+                    }
+                }]
+            }
+        },
+        "aRouteTableNG": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ng", "a"]]
+                    }
+                }]
+            }
+        },
+        "bRouteTableNG": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ng", "b"]]
+                    }
+                }]
+            }
+        },
+        "SubnetAPublic": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "ZoneSubnetA"
+                },
+                "CidrBlock": {
+                    "Fn::Join": ["", [{
+                        "Ref": "VPCIPv4CIDR"
+                    }, ".0.0/20"]]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "public", "a"]]
+                    }
+                }]
+            }
+        },
+        "SubnetAPublicRouteTable": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": ["SubnetAPublic", "RouteTableIG"],
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTableIG"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetAPublic"
+                }
+            }
+        },
+        "SubnetAPrivate": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "ZoneSubnetA"
+                },
+                "CidrBlock": {
+                    "Fn::Join": ["", [{
+                        "Ref": "VPCIPv4CIDR"
+                    }, ".16.0/20"]]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "private", "a"]]
+                    }
+                }]
+            }
+        },
+        "SubnetAPrivateRouteTable": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": ["SubnetAPublic", "RouteTableIG"],
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "aRouteTableNG"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetAPrivate"
+                }
+            }
+        },
+        "SubnetBPublic": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "ZoneSubnetB"
+                },
+                "CidrBlock": {
+                    "Fn::Join": ["", [{
+                        "Ref": "VPCIPv4CIDR"
+                    }, ".32.0/20"]]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "public", "b"]]
+                    }
+                }]
+            }
+        },
+        "SubnetBPublicRouteTable": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": ["SubnetBPublic", "RouteTableIG"],
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTableIG"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetBPublic"
+                }
+            }
+        },
+        "SubnetBPrivate": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "ZoneSubnetB"
+                },
+                "CidrBlock": {
+                    "Fn::Join": ["", [{
+                        "Ref": "VPCIPv4CIDR"
+                    }, ".48.0/20"]]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "private", "b"]]
+                    }
+                }]
+            }
+        },
+        "SubnetBPrivateRouteTable": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": ["SubnetBPrivate", "bRouteTableNG"],
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "bRouteTableNG"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetBPrivate"
+                }
+            }
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ig"]]
+                    }
+                }]
+            }
+        },
+        "VPCGatewayAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "DependsOn": ["VPC", "InternetGateway"],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "RouteIG": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": ["RouteTableIG", "InternetGateway"],
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "RouteTableIG"
+                },
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "aEIp": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "Domain": "vpc"
+            }
+        },
+        "aNatGateway": {
+            "Type": "AWS::EC2::NatGateway",
+            "DependsOn": ["aEIp", "SubnetAPublic"],
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": ["aEIp", "AllocationId"]
+                },
+                "SubnetId": {
+                    "Ref": "SubnetAPublic"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ng", "a"]]
+                    }
+                }]
+            }
+        },
+        "aRouteNG": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": ["aRouteTableNG", "aNatGateway"],
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "aRouteTableNG"
+                },
+                "NatGatewayId": {
+                    "Ref": "aNatGateway"
+                }
+            }
+        },
+        "bEIp": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": ["VPC"],
+            "Properties": {
+                "Domain": "vpc"
+            }
+        },
+        "bNatGateway": {
+            "Type": "AWS::EC2::NatGateway",
+            "DependsOn": ["bEIp", "SubnetBPublic"],
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": ["bEIp", "AllocationId"]
+                },
+                "SubnetId": {
+                    "Ref": "SubnetBPublic"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": {
+                        "Fn::Join": ["-", [{
+                            "Fn::FindInMap": ["Environment", "Constant", "ProductName"]
+                        }, "ng", "b"]]
+                    }
+                }]
+            }
+        },
+        "bRouteNG": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": ["bRouteTableNG", "bNatGateway"],
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "bRouteTableNG"
+                },
+                "NatGatewayId": {
+                    "Ref": "bNatGateway"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "DefaultSecurityGroup": {
+            "Description": "Default Security Group",
+            "Value": {
+                "Fn::GetAtt": ["VPC", "DefaultSecurityGroup"]
+            }
+        },
+        "aEIpName": {
+            "Description": "Elastic Ip A Zone",
+            "Value": {
+                "Ref": "aEIp"
+            }
+        },
+        "bEIpName": {
+            "Description": "Elastic Ip B Zone",
+            "Value": {
+                "Ref": "bEIp"
+            }
+        }
+    }
+}
